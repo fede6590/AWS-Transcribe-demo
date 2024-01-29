@@ -35,7 +35,7 @@ def create_transcribe_client():
     try:
         session = boto3.Session(region_name=region_name)
         _ = session.client('transcribe')  # Test for IAM role availability
-        return TranscribeStreamingClient()
+        return TranscribeStreamingClient(region=region_name)
     except Exception as e:
         logger.error(f'Error: {e}')
         raise e
