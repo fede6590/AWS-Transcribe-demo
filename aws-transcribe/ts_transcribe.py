@@ -19,8 +19,8 @@ logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
 bucket_name = os.environ.get('BUCKET', 'poc-subtitulos')
-prefix = os.environ.get('PREFIX', 'live')
-region_name = 'us-east-1'
+# prefix = os.environ.get('PREFIX', 'live')
+region = 'us-east-1'
 
 
 class MyEventHandler(TranscriptResultStreamHandler):
@@ -31,11 +31,11 @@ class MyEventHandler(TranscriptResultStreamHandler):
                 logger.info(alt.transcript)
 
 
-def create_transcribe_client():
+def create_transcribe_client(region):
     try:
-        session = boto3.Session(region_name=region_name)
+        session = boto3.Session(region_name=region)
         _ = session.client('transcribe')  # Test for IAM role availability
-        return TranscribeStreamingClient(region=region_name)
+        return TranscribeStreamingClient(region=region)
     except Exception as e:
         logger.error(f'Error: {e}')
         raise e
@@ -56,7 +56,7 @@ async def download_ts_files(bucket_name):
                     obj['Key'],
                     os.path.join('/temp/', obj['Key'])
                     )
-                cleanup_oldest_file(10)  # Keep only the 10 most recent files
+                # cleanup_oldest_file(10)  # Keep only the 10 most recent files
 
 
 async def ts_stream():
@@ -98,8 +98,8 @@ def cleanup_oldest_file(max_files):
             os.remove(file)
 
 
-async def basic_transcribe(bucket_name):
-    client = create_transcribe_client()
+async def basic_transcribe(bucket_name, region):
+    client = create_transcribe_client(region)
     logger.info('CLIENT READY')
     # Start transcription to generate our async stream
     stream = await client.start_stream_transcription(
@@ -115,6 +115,10 @@ async def basic_transcribe(bucket_name):
     logger.info('FILES READY')
     await asyncio.gather(write_chunks(stream), handler.handle_events())
     logger.info('CHUNKS READY')
+    # cleanup_oldest_file(10)
+    # logger.info('LOOP ENDED WITH CLEANUP OK')
+
+
 if __name__ == "__main__":
-    asyncio.run(basic_transcribe(bucket_name))
+    asyncio.run(basic_transcribe(bucket_name, region))
     logger.info('RUN READY')
