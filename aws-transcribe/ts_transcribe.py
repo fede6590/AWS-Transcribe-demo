@@ -35,9 +35,9 @@ def create_transcribe_client():
     try:
         session = boto3.Session(region_name=region_name)
         _ = session.client('transcribe')  # Test for IAM role availability
-        return TranscribeStreamingClient(session=session)
+        return TranscribeStreamingClient()
     except Exception as e:
-        logger.info(f'Error: {e}')
+        logger.error(f'Error: {e}')
         raise e
 
 
@@ -68,7 +68,7 @@ async def ts_stream():
 
         # Sort the files by modification time and take the latest one
         latest_file = sorted(ts_files, key=lambda f: os.path.getmtime(f), reverse=True)[0]
-        
+
         cmd = ['ffmpeg', '-i', latest_file, '-vn', '-acodec', 'pcm_s16le', '-f', 'wav', '-']
         proc = await asyncio.create_subprocess_exec(*cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
 
