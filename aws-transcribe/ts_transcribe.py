@@ -20,6 +20,7 @@ logger.addHandler(logging.StreamHandler(sys.stdout))
 
 bucket_name = os.environ.get('BUCKET', 'poc-subtitulos')
 prefix = os.environ.get('PREFIX', 'live')
+region_name = 'us-east-1'
 
 
 class MyEventHandler(TranscriptResultStreamHandler):
@@ -31,25 +32,13 @@ class MyEventHandler(TranscriptResultStreamHandler):
 
 
 def create_transcribe_client():
-    """Creates a TranscribeStreamingClient, using IAM role credentials if available,
-    otherwise using environment variables."""
     try:
-        session = boto3.Session()
+        session = boto3.Session(region_name=region_name)
         _ = session.client('transcribe')  # Test for IAM role availability
         return TranscribeStreamingClient(session=session)
-
     except Exception as e:
-        logger.info("IAM role credentials not found, using environment variables.")
-        try:
-            session = boto3.Session(
-                aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
-                aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
-                region_name="us-east-1"
-            )
-            return TranscribeStreamingClient(session=session)
-        except KeyError:
-            logger.info("Environment variables not set for AWS credentials.")
-            raise e
+        logger.info(f'Error: {e}')
+        raise e
 
 
 async def download_ts_files(bucket_name):
@@ -79,7 +68,7 @@ async def ts_stream():
 
         # Sort the files by modification time and take the latest one
         latest_file = sorted(ts_files, key=lambda f: os.path.getmtime(f), reverse=True)[0]
-
+        
         cmd = ['ffmpeg', '-i', latest_file, '-vn', '-acodec', 'pcm_s16le', '-f', 'wav', '-']
         proc = await asyncio.create_subprocess_exec(*cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
 
@@ -91,7 +80,7 @@ async def ts_stream():
 
 
 async def write_chunks(stream):
-    # This connects the raw audio chunks generator coming from the microphone
+    # This connects the raw audio chunks generator
     # and passes them along to the transcription stream.
     async for chunk, status in ts_stream():
         await stream.input_stream.send_audio_event(audio_chunk=chunk)
@@ -110,7 +99,6 @@ def cleanup_oldest_file(max_files):
 
 
 async def basic_transcribe(bucket_name):
-    # Setup up our client with our chosen AWS region
     client = create_transcribe_client()
     logger.info('CLIENT READY')
     # Start transcription to generate our async stream
