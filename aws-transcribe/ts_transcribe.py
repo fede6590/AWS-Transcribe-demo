@@ -48,15 +48,17 @@ async def download_ts_files(bucket_name):
 
     for page in paginator.paginate(Bucket=bucket_name):
         for obj in page['Contents']:
+            logger.info(obj, obj['Key'])
             if obj['Key'].endswith('.ts'):
                 await loop.run_in_executor(
                     None,
                     s3.download_file,
                     bucket_name,
                     obj['Key'],
-                    os.path.join('/temp/', obj['Key'])
+                    os.path.join('/temp/', os.path.basename(obj['Key']))
                     )
-                # cleanup_oldest_file(10)  # Keep only the 10 most recent files
+    logger.info('DOWNLOAD OK')
+    cleanup_oldest_file(10)  # Keep only the 10 most recent files
 
 
 async def ts_stream():
@@ -115,8 +117,6 @@ async def basic_transcribe(bucket_name, region):
     logger.info('FILES READY')
     await asyncio.gather(write_chunks(stream), handler.handle_events())
     logger.info('CHUNKS READY')
-    # cleanup_oldest_file(10)
-    # logger.info('LOOP ENDED WITH CLEANUP OK')
 
 
 if __name__ == "__main__":
