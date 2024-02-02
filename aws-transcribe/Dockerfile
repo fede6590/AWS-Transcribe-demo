@@ -13,6 +13,8 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+RUN mkdir /app/temp && chown dev:dev /app/temp
+
 USER dev
 
 COPY requirements.txt .
