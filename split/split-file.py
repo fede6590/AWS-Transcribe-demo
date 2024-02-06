@@ -15,7 +15,7 @@ def split_video(input_file, segment_duration):
         print("Error during segmentation:", error)
 
 
-filename = "video.mp4"
-duration = 2
+input_file = "video.mp4"
+segment_duration = 2
 
-split_video(filename, duration)
+split_video(input_file, segment_duration)
