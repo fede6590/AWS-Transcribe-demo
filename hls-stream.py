@@ -7,11 +7,12 @@ from amazon_transcribe.client import TranscribeStreamingClient
 from amazon_transcribe.handlers import TranscriptResultStreamHandler
 from amazon_transcribe.model import TranscriptEvent
 
+REGION = "us-east-1"
+URL = os.environ.get('URL')
 
 SAMPLE_RATE = 16000
 CHANNEL_NUMS = 1
 CHUNK_SIZE = 4096
-REGION = "us-east-1"
 
 
 class MyEventHandler(TranscriptResultStreamHandler):
@@ -26,12 +27,14 @@ async def basic_transcribe():
     AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
     AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
 
-    session = boto3.Session(
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        region_name=REGION
-    )
-    _ = session.client('transcribe')  # Test for IAM role availability
+    if (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY) is not None:
+        session = boto3.Session(
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            region_name=REGION
+        )
+        _ = session.client('transcribe')  # Test for IAM role availability
+
     client = TranscribeStreamingClient(region=REGION)
 
     stream = await client.start_stream_transcription(
@@ -41,15 +44,12 @@ async def basic_transcribe():
     )
 
     async def write_chunks():
-        # mediapackage_url = "https://8572e342e3eeb5c4.mediapackage.us-east-1.amazonaws.com/out/v1/09a97e8e9e044b6d9c27307e2b5a1383/index.mpd"
-        # mediapackage_url = 'https://8572e342e3eeb5c4.mediapackage.us-east-1.amazonaws.com/out/v1/8291e48e06064437b36057201626431d/index.m3u8'
-        mediapackage_url = 'stream/video.m3u8'
-
         command = [
             'ffmpeg',
-            '-i', mediapackage_url,
+            '-i', URL,
             '-vn',
-            '-acodec', 'pcm_s16le',
+            '-acodec', 'copy',
+            # '-acodec', 'pcm_s16le',
             '-ar', str(SAMPLE_RATE),
             '-ac', str(CHANNEL_NUMS),
             '-f', 'wav',
@@ -60,10 +60,11 @@ async def basic_transcribe():
         try:
             loop = asyncio.get_running_loop()
             while True:
-                chunk = await loop.run_in_executor(None,
-                                                   ffmpeg_process.stdout.read,
-                                                   CHUNK_SIZE
-                                                   )
+                chunk = await loop.run_in_executor(
+                    None,
+                    ffmpeg_process.stdout.read,
+                    CHUNK_SIZE
+                    )
                 if not chunk:
                     break
                 await stream.input_stream.send_audio_event(audio_chunk=chunk)
