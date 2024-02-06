@@ -1,5 +1,3 @@
 amazon_transcribe
 nest_asyncio
-aiofile
 boto3
-m3u8
