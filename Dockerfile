@@ -13,7 +13,6 @@ USER dev
 
 COPY requirements.txt .
 COPY hls-stream.py .
-COPY stream stream/
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --no-cache-dir -r requirements.txt

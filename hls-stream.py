@@ -8,7 +8,7 @@ from amazon_transcribe.handlers import TranscriptResultStreamHandler
 from amazon_transcribe.model import TranscriptEvent
 
 REGION = "us-east-1"
-URL = os.environ.get('URL')
+SOURCE = os.environ.get('SOURCE')
 
 SAMPLE_RATE = 16000
 CHANNEL_NUMS = 1
@@ -46,10 +46,9 @@ async def basic_transcribe():
     async def write_chunks():
         command = [
             'ffmpeg',
-            '-i', URL,
+            '-i', SOURCE,
             '-vn',
-            '-acodec', 'copy',
-            # '-acodec', 'pcm_s16le',
+            '-acodec', 'pcm_s16le',
             '-ar', str(SAMPLE_RATE),
             '-ac', str(CHANNEL_NUMS),
             '-f', 'wav',
