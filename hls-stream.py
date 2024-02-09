@@ -10,9 +10,23 @@ from amazon_transcribe.model import TranscriptEvent
 REGION = "us-east-1"
 SOURCE = os.environ.get('SOURCE')
 
+LOGLEVEL = os.environ.get('LOGLEVEL')
+if LOGLEVEL is None:
+    LOGLEVEL = 'warning'
+
+VERBOSE = os.environ.get('VERBOSE')
+if VERBOSE is None:
+    VERBOSE = 'error'
+
+CHUNK_DURATION_MS = 100  # Set between 50 and 200ms for real-time applications
 SAMPLE_RATE = 16000
 CHANNEL_NUMS = 1
-CHUNK_SIZE = 4096
+BITS_PER_SAMPLE = 16
+
+
+def chunk_size(chunk_duration_ms):
+    bytes_per_sample = BITS_PER_SAMPLE // 8
+    return int(chunk_duration_ms / 1000 * SAMPLE_RATE * bytes_per_sample)
 
 
 class MyEventHandler(TranscriptResultStreamHandler):
@@ -41,6 +55,7 @@ async def basic_transcribe():
         language_code="en-US",
         media_sample_rate_hz=SAMPLE_RATE,
         media_encoding="pcm",
+        enable_partial_results_stabilization=True,
     )
 
     async def write_chunks():
@@ -51,6 +66,10 @@ async def basic_transcribe():
             '-acodec', 'pcm_s16le',
             '-ar', str(SAMPLE_RATE),
             '-ac', str(CHANNEL_NUMS),
+            '-loglevel', str(LOGLEVEL),  # debug, info, warning (default param), fatal
+            '-v', str(VERBOSE),  # quiet, error, panic
+            '-hide_banner',
+            # '-stats',
             '-f', 'wav',
             '-'
         ]
@@ -62,7 +81,7 @@ async def basic_transcribe():
                 chunk = await loop.run_in_executor(
                     None,
                     ffmpeg_process.stdout.read,
-                    CHUNK_SIZE
+                    chunk_size(CHUNK_DURATION_MS)
                     )
                 if not chunk:
                     break

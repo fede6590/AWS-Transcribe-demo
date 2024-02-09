@@ -1,0 +1,187 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Resources": {
+      "MyVPC": {
+        "Type": "AWS::EC2::VPC",
+        "Properties": {
+          "CidrBlock": "10.0.0.0/16",
+          "EnableDnsSupport": true,
+          "EnableDnsHostnames": true,
+          "Tags": [
+            {
+              "Key": "Name",
+              "Value": "MyVPC"
+            }
+          ]
+        }
+      },
+      "MySubnet": {
+        "Type": "AWS::EC2::Subnet",
+        "Properties": {
+          "VpcId": {
+            "Ref": "MyVPC"
+          },
+          "CidrBlock": "10.0.1.0/24",
+          "AvailabilityZone": "us-west-2a",
+          "MapPublicIpOnLaunch": true,
+          "Tags": [
+            {
+              "Key": "Name",
+              "Value": "MySubnet"
+            }
+          ]
+        }
+      },
+      "MyInternetGateway": {
+        "Type": "AWS::EC2::InternetGateway",
+        "Properties": {
+          "Tags": [
+            {
+              "Key": "Name",
+              "Value": "MyInternetGateway"
+            }
+          ]
+        }
+      },
+      "AttachGateway": {
+        "Type": "AWS::EC2::VPCGatewayAttachment",
+        "Properties": {
+          "VpcId": {
+            "Ref": "MyVPC"
+          },
+          "InternetGatewayId": {
+            "Ref": "MyInternetGateway"
+          }
+        }
+      },
+      "MyRouteTable": {
+        "Type": "AWS::EC2::RouteTable",
+        "Properties": {
+          "VpcId": {
+            "Ref": "MyVPC"
+          },
+          "Tags": [
+            {
+              "Key": "Name",
+              "Value": "MyRouteTable"
+            }
+          ]
+        }
+      },
+      "MyRoute": {
+        "Type": "AWS::EC2::Route",
+        "DependsOn": "AttachGateway",
+        "Properties": {
+          "RouteTableId": {
+            "Ref": "MyRouteTable"
+          },
+          "DestinationCidrBlock": "0.0.0.0/0",
+          "GatewayId": {
+            "Ref": "MyInternetGateway"
+          }
+        }
+      },
+      "MySecurityGroup": {
+        "Type": "AWS::EC2::SecurityGroup",
+        "Properties": {
+          "GroupDescription": "Allow all inbound traffic",
+          "SecurityGroupIngress": [
+            {
+              "IpProtocol": "udp",
+              "FromPort": "514",
+              "ToPort": "514",
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "VpcId": {
+            "Ref": "MyVPC"
+          },
+          "Tags": [
+            {
+              "Key": "Name",
+              "Value": "MySecurityGroup"
+            }
+          ]
+        }
+      },
+      "MyNLB": {
+        "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+        "Properties": {
+          "Scheme": "internet-facing",
+          "Type": "network",
+          "Subnets": [
+            {
+              "Ref": "MySubnet"
+            }
+          ],
+          "Tags": [
+            {
+              "Key": "Name",
+              "Value": "MyNLB"
+            }
+          ]
+        }
+      },
+      "MyTargetGroup": {
+        "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+        "Properties": {
+          "HealthCheckIntervalSeconds":  30,
+          "HealthCheckPath": "/healthcheck",
+          "HealthCheckTimeoutSeconds":  5,
+          "HealthyThresholdCount":  3,
+          "UnhealthyThresholdCount":  3,
+          "Port":  514,
+          "Protocol": "UDP",
+          "VpcId": {
+            "Ref": "MyVPC"
+          },
+          "Tags": [
+            {
+              "Key": "Name",
+              "Value": "MyTargetGroup"
+            }
+          ]
+        }
+      },
+      "MyListener": {
+        "Type": "AWS::ElasticLoadBalancingV2::Listener",
+        "Properties": {
+          "DefaultActions": [
+            {
+              "Type": "forward",
+              "TargetGroupArn": {
+                "Ref": "MyTargetGroup"
+              }
+            }
+          ],
+          "LoadBalancerArn": {
+            "Ref": "MyNLB"
+          },
+          "Port":  514,
+          "Protocol": "UDP"
+        }
+      },
+      "MyTaskDefinition": {
+        "Type": "AWS::ECS::TaskDefinition",
+        "Properties": {
+          "Family": "MyTaskDefinition",
+          "ContainerDefinitions": [
+            {
+              "Name": "MyContainer",
+              "Image": "my-ecr-repo-url/my-image:latest",
+              "Memory":  512,
+              "Cpu":  256,
+              "PortMappings": [
+                {
+                  "ContainerPort":  514,
+                  "Protocol": "udp"
+                }
+              ]
+            }
+          ],
+          "RequiresCompatibilities": [
+            "FARGATE"
+          ],
+          "NetworkMode": "awsvpc",
+          "ExecutionRoleArn": "```
+  
