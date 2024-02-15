@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Resources:
-  media-flow-sub:
+  MediaFlowSub:
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock:   10.0.0.0/16
@@ -8,11 +8,11 @@ Resources:
       EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value: media-flow-sub
+          Value: MediaFlowSub
   poc-sub:
     Type: AWS::EC2::Subnet
     Properties:
-      VpcId: !Ref media-flow-sub
+      VpcId: !Ref MediaFlowSub
       CidrBlock:   10.0.1.0/24
       AvailabilityZone: us-east-1a
       MapPublicIpOnLaunch: true
@@ -28,12 +28,12 @@ Resources:
   AttachGateway:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
-      VpcId: !Ref media-flow-sub
+      VpcId: !Ref MediaFlowSub
       InternetGatewayId: !Ref poc-sub-IG
   poc-sub-RT:
     Type: AWS::EC2::RouteTable
     Properties:
-      VpcId: !Ref media-flow-sub
+      VpcId: !Ref MediaFlowSub
       Tags:
         - Key: Name
           Value: poc-sub-RT
@@ -58,7 +58,7 @@ Resources:
           FromPort:   514
           ToPort:   514
           CidrIp:   0.0.0.0/0
-      VpcId: !Ref media-flow-sub
+      VpcId: !Ref MediaFlowSub
       Tags:
         - Key: Name
           Value: poc-sub-SG
@@ -81,7 +81,7 @@ Resources:
       UnhealthyThresholdCount:   3
       Port:   514
       Protocol: UDP
-      VpcId: !Ref media-flow-sub
+      VpcId: !Ref MediaFlowSub
       Tags:
         - Key: Name
           Value: poc-sub-TG
