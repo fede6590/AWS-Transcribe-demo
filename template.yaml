@@ -9,7 +9,7 @@ Resources:
       Tags:
         - Key: Name
           Value: MediaFlowSub
-  poc-sub:
+  PocSub:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref MediaFlowSub
@@ -18,38 +18,38 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: poc-sub
-  poc-sub-IG:
+          Value: PocSub
+  PocSubIG:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
-          Value: poc-sub-IG
+          Value: PocSubIG
   AttachGateway:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       VpcId: !Ref MediaFlowSub
-      InternetGatewayId: !Ref poc-sub-IG
-  poc-sub-RT:
+      InternetGatewayId: !Ref PocSubIG
+  PocSubRT:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref MediaFlowSub
       Tags:
         - Key: Name
-          Value: poc-sub-RT
-  poc-sub-RTA:
+          Value: PocSubRT
+  PocSubRTA:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref poc-sub
-      RouteTableId: !Ref poc-sub-RT
-  poc-sub-Route:
+      SubnetId: !Ref PocSub
+      RouteTableId: !Ref PocSubRT
+  PocSubRoute:
     Type: AWS::EC2::Route
     DependsOn: AttachGateway
     Properties:
-      RouteTableId: !Ref poc-sub-RT
+      RouteTableId: !Ref PocSubRT
       DestinationCidrBlock:   0.0.0.0/0
-      GatewayId: !Ref poc-sub-IG
-  poc-sub-SG:
+      GatewayId: !Ref PocSubIG
+  PocSubSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Allow all inbound traffic
@@ -61,18 +61,18 @@ Resources:
       VpcId: !Ref MediaFlowSub
       Tags:
         - Key: Name
-          Value: poc-sub-SG
-  poc-sub-NLB:
+          Value: PocSubSG
+  PocSubNLB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Scheme: internet-facing
       Type: network
       Subnets:
-        - !Ref poc-sub
+        - !Ref PocSub
       Tags:
         - Key: Name
-          Value: poc-sub-NLB
-  poc-sub-TG:
+          Value: PocSubNLB
+  PocSubTG:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds:   30
@@ -84,23 +84,23 @@ Resources:
       VpcId: !Ref MediaFlowSub
       Tags:
         - Key: Name
-          Value: poc-sub-TG
-  poc-sub-List:
+          Value: PocSubTG
+  PocSubListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
         - Type: forward
-          TargetGroupArn: !GetAtt poc-sub-TG.TargetGroupArn
-      LoadBalancerArn: !GetAtt poc-sub-NLB.LoadBalancerArn
+          TargetGroupArn: !GetAtt PocSubTG.TargetGroupArn
+      LoadBalancerArn: !GetAtt PocSubNLB.LoadBalancerArn
       Port:   514
       Protocol: UDP
-  poc-sub-TD:
+  PocSubTD:
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: poc-sub-TD
+      Family: PocSubTD
       ContainerDefinitions:
-        - Name: poc-sub-container
-          Image:   410677554255.dkr.ecr.us-east-1.amazonaws.com/poc-subtitulos:latest
+        - Name: PocSubContainer
+          Image:   410677554255.dkr.ecr.us-east-1.amazonaws.com/PocSubtitulos:latest
           Memory:   4096
           Cpu:   2048
           PortMappings:
@@ -110,25 +110,25 @@ Resources:
         - FARGATE
       NetworkMode: awsvpc
       ExecutionRoleArn: arn:aws:iam::410677554255:role/ecsTaskExecutionRole
-  poc-sub-cluster:
+  PocSubCluster:
     Type: AWS::ECS::Cluster
     Properties:
-      ClusterName: poc-sub-cluster
-  poc-sub-service:
+      ClusterName: PocSubCluster
+  PocSubService:
     Type: AWS::ECS::Service
     Properties:
-      Cluster: !Ref poc-sub-cluster
+      Cluster: !Ref PocSubCluster
       DesiredCount:   1
       LaunchType: FARGATE
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
           Subnets:
-            - !Ref poc-sub
+            - !Ref PocSub
           SecurityGroups:
-            - !Ref poc-sub-SG
-      TaskDefinition: !Ref poc-sub-TD
+            - !Ref PocSubSG
+      TaskDefinition: !Ref PocSubTD
       LoadBalancers:
-        - TargetGroupArn: !GetAtt poc-sub-TG.TargetGroupArn
-          ContainerName: poc-sub-container
+        - TargetGroupArn: !GetAtt PocSubTG.TargetGroupArn
+          ContainerName: PocSubContainer
           ContainerPort:   514

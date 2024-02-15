@@ -15,7 +15,7 @@
           ]
         }
       },
-      "poc-sub": {
+      "PocSub": {
         "Type": "AWS::EC2::Subnet",
         "Properties": {
           "VpcId": {
@@ -27,18 +27,18 @@
           "Tags": [
             {
               "Key": "Name",
-              "Value": "poc-sub"
+              "Value": "PocSub"
             }
           ]
         }
       },
-      "poc-sub-IG": {
+      "PocSubIG": {
         "Type": "AWS::EC2::InternetGateway",
         "Properties": {
           "Tags": [
             {
               "Key": "Name",
-              "Value": "poc-sub-IG"
+              "Value": "PocSubIG"
             }
           ]
         }
@@ -50,11 +50,11 @@
             "Ref": "MediaFlowSub"
           },
           "InternetGatewayId": {
-            "Ref": "poc-sub-IG"
+            "Ref": "PocSubIG"
           }
         }
       },
-      "poc-sub-RT": {
+      "PocSubRT": {
         "Type": "AWS::EC2::RouteTable",
         "Properties": {
           "VpcId": {
@@ -63,36 +63,36 @@
           "Tags": [
             {
               "Key": "Name",
-              "Value": "poc-sub-RT"
+              "Value": "PocSubRT"
             }
           ]
         }
       },
-      "poc-sub-RTA": {
+      "PocSubRTA": {
         "Type": "AWS::EC2::SubnetRouteTableAssociation",
         "Properties": {
           "SubnetId": {
-            "Ref": "poc-sub"
+            "Ref": "PocSub"
           },
           "RouteTableId": {
-            "Ref": "poc-sub-RT"
+            "Ref": "PocSubRT"
           }
         }
       },
-      "poc-sub-Route": {
+      "PocSubRoute": {
         "Type": "AWS::EC2::Route",
         "DependsOn": "AttachGateway",
         "Properties": {
           "RouteTableId": {
-            "Ref": "poc-sub-RT"
+            "Ref": "PocSubRT"
           },
           "DestinationCidrBlock": "0.0.0.0/0",
           "GatewayId": {
-            "Ref": "poc-sub-IG"
+            "Ref": "PocSubIG"
           }
         }
       },
-      "poc-sub-SG": {
+      "PocSubSG": {
         "Type": "AWS::EC2::SecurityGroup",
         "Properties": {
           "GroupDescription": "Allow all inbound traffic",
@@ -110,30 +110,30 @@
           "Tags": [
             {
               "Key": "Name",
-              "Value": "poc-sub-SG"
+              "Value": "PocSubSG"
             }
           ]
         }
       },
-      "poc-sub-NLB": {
+      "PocSubNLB": {
         "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
         "Properties": {
           "Scheme": "internet-facing",
           "Type": "network",
           "Subnets": [
             {
-              "Ref": "poc-sub"
+              "Ref": "PocSub"
             }
           ],
           "Tags": [
             {
               "Key": "Name",
-              "Value": "poc-sub-NLB"
+              "Value": "PocSubNLB"
             }
           ]
         }
       },
-      "poc-sub-TG": {
+      "PocSubTG": {
         "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
         "Properties": {
           "HealthCheckIntervalSeconds":   30,
@@ -148,37 +148,37 @@
           "Tags": [
             {
               "Key": "Name",
-              "Value": "poc-sub-TG"
+              "Value": "PocSubTG"
             }
           ]
         }
       },
-      "poc-sub-List": {
+      "PocSubListener": {
         "Type": "AWS::ElasticLoadBalancingV2::Listener",
         "Properties": {
           "DefaultActions": [
             {
               "Type": "forward",
               "TargetGroupArn": {
-                "Ref": "poc-sub-TG"
+                "Ref": "PocSubTG"
               }
             }
           ],
           "LoadBalancerArn": {
-            "Ref": "poc-sub-NLB"
+            "Ref": "PocSubNLB"
           },
           "Port":  514,
           "Protocol": "UDP"
         }
       },
-      "poc-sub-TD": {
+      "PocSubTD": {
         "Type": "AWS::ECS::TaskDefinition",
         "Properties": {
-          "Family": "poc-sub-TD",
+          "Family": "PocSubTD",
           "ContainerDefinitions": [
             {
-              "Name": "poc-sub-container",
-              "Image": "410677554255.dkr.ecr.us-east-1.amazonaws.com/poc-subtitulos:latest",
+              "Name": "PocSubContainer",
+              "Image": "410677554255.dkr.ecr.us-east-1.amazonaws.com/PocSubtitulos:latest",
               "Memory":  4096,
               "Cpu":  2048,
               "PortMappings": [
@@ -196,17 +196,17 @@
           "ExecutionRoleArn": "arn:aws:iam::410677554255:role/ecsTaskExecutionRole"
         }
       },
-      "poc-sub-cluster": {
+      "PocSubCluster": {
         "Type": "AWS::ECS::Cluster",
         "Properties": {
-          "ClusterName": "poc-sub-cluster"
+          "ClusterName": "PocSubCluster"
         }
       },
-      "poc-sub-service": {
+      "PocSubService": {
         "Type": "AWS::ECS::Service",
         "Properties": {
           "Cluster": {
-            "Ref": "poc-sub-cluster"
+            "Ref": "PocSubCluster"
           },
           "DesiredCount":  1,
           "LaunchType": "FARGATE",
@@ -215,25 +215,25 @@
               "AssignPublicIp": "ENABLED",
               "Subnets": [
                 {
-                  "Ref": "poc-sub"
+                  "Ref": "PocSub"
                 }
               ],
               "SecurityGroups": [
                 {
-                  "Ref": "poc-sub-SG"
+                  "Ref": "PocSubSG"
                 }
               ]
             }
           },
           "TaskDefinition": {
-            "Ref": "poc-sub-TD"
+            "Ref": "PocSubTD"
           },
           "LoadBalancers": [
             {
               "TargetGroupArn": {
-                "Ref": "poc-sub-TG"
+                "Ref": "PocSubTG"
               },
-              "ContainerName": "poc-sub-container",
+              "ContainerName": "PocSubContainer",
               "ContainerPort":  514
             }
           ]

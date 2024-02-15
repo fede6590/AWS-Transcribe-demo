@@ -1,9 +1,9 @@
 # Applying AWS Transcribe on HLS or DASH
 
 ```
-docker build -t poc-subtitulos .
+docker build -t PocSubtitulos .
 ```
 
 ```
-docker run poc-subtitulos
+docker run PocSubtitulos
 ```
