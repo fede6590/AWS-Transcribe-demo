@@ -1,7 +1,7 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
     "Resources": {
-      "MyVPC": {
+      "media-flow-sub": {
         "Type": "AWS::EC2::VPC",
         "Properties": {
           "CidrBlock": "10.0.0.0/16",
@@ -10,35 +10,35 @@
           "Tags": [
             {
               "Key": "Name",
-              "Value": "MyVPC"
+              "Value": "media-flow-sub"
             }
           ]
         }
       },
-      "MySubnet": {
+      "poc-sub": {
         "Type": "AWS::EC2::Subnet",
         "Properties": {
           "VpcId": {
-            "Ref": "MyVPC"
+            "Ref": "media-flow-sub"
           },
           "CidrBlock": "10.0.1.0/24",
-          "AvailabilityZone": "us-west-2a",
+          "AvailabilityZone": "us-east-1a",
           "MapPublicIpOnLaunch": true,
           "Tags": [
             {
               "Key": "Name",
-              "Value": "MySubnet"
+              "Value": "poc-sub"
             }
           ]
         }
       },
-      "MyInternetGateway": {
+      "poc-sub-IG": {
         "Type": "AWS::EC2::InternetGateway",
         "Properties": {
           "Tags": [
             {
               "Key": "Name",
-              "Value": "MyInternetGateway"
+              "Value": "poc-sub-IG"
             }
           ]
         }
@@ -47,41 +47,52 @@
         "Type": "AWS::EC2::VPCGatewayAttachment",
         "Properties": {
           "VpcId": {
-            "Ref": "MyVPC"
+            "Ref": "media-flow-sub"
           },
           "InternetGatewayId": {
-            "Ref": "MyInternetGateway"
+            "Ref": "poc-sub-IG"
           }
         }
       },
-      "MyRouteTable": {
+      "poc-sub-RT": {
         "Type": "AWS::EC2::RouteTable",
         "Properties": {
           "VpcId": {
-            "Ref": "MyVPC"
+            "Ref": "media-flow-sub"
           },
           "Tags": [
             {
               "Key": "Name",
-              "Value": "MyRouteTable"
+              "Value": "poc-sub-RT"
             }
           ]
         }
       },
-      "MyRoute": {
+      "poc-sub-RTA": {
+        "Type": "AWS::EC2::SubnetRouteTableAssociation",
+        "Properties": {
+          "SubnetId": {
+            "Ref": "poc-sub"
+          },
+          "RouteTableId": {
+            "Ref": "poc-sub-RT"
+          }
+        }
+      },
+      "poc-sub-Route": {
         "Type": "AWS::EC2::Route",
         "DependsOn": "AttachGateway",
         "Properties": {
           "RouteTableId": {
-            "Ref": "MyRouteTable"
+            "Ref": "poc-sub-RT"
           },
           "DestinationCidrBlock": "0.0.0.0/0",
           "GatewayId": {
-            "Ref": "MyInternetGateway"
+            "Ref": "poc-sub-IG"
           }
         }
       },
-      "MySecurityGroup": {
+      "poc-sub-SG": {
         "Type": "AWS::EC2::SecurityGroup",
         "Properties": {
           "GroupDescription": "Allow all inbound traffic",
@@ -94,83 +105,82 @@
             }
           ],
           "VpcId": {
-            "Ref": "MyVPC"
+            "Ref": "media-flow-sub"
           },
           "Tags": [
             {
               "Key": "Name",
-              "Value": "MySecurityGroup"
+              "Value": "poc-sub-SG"
             }
           ]
         }
       },
-      "MyNLB": {
+      "poc-sub-NLB": {
         "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
         "Properties": {
           "Scheme": "internet-facing",
           "Type": "network",
           "Subnets": [
             {
-              "Ref": "MySubnet"
+              "Ref": "poc-sub"
             }
           ],
           "Tags": [
             {
               "Key": "Name",
-              "Value": "MyNLB"
+              "Value": "poc-sub-NLB"
             }
           ]
         }
       },
-      "MyTargetGroup": {
+      "poc-sub-TG": {
         "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
         "Properties": {
-          "HealthCheckIntervalSeconds":  30,
-          "HealthCheckPath": "/healthcheck",
-          "HealthCheckTimeoutSeconds":  5,
-          "HealthyThresholdCount":  3,
-          "UnhealthyThresholdCount":  3,
-          "Port":  514,
+          "HealthCheckIntervalSeconds":   30,
+          "HealthCheckTimeoutSeconds":   5,
+          "HealthyThresholdCount":   3,
+          "UnhealthyThresholdCount":   3,
+          "Port":   514,
           "Protocol": "UDP",
           "VpcId": {
-            "Ref": "MyVPC"
+            "Ref": "media-flow-sub"
           },
           "Tags": [
             {
               "Key": "Name",
-              "Value": "MyTargetGroup"
+              "Value": "poc-sub-TG"
             }
           ]
         }
       },
-      "MyListener": {
+      "poc-sub-List": {
         "Type": "AWS::ElasticLoadBalancingV2::Listener",
         "Properties": {
           "DefaultActions": [
             {
               "Type": "forward",
               "TargetGroupArn": {
-                "Ref": "MyTargetGroup"
+                "Ref": "poc-sub-TG"
               }
             }
           ],
           "LoadBalancerArn": {
-            "Ref": "MyNLB"
+            "Ref": "poc-sub-NLB"
           },
           "Port":  514,
           "Protocol": "UDP"
         }
       },
-      "MyTaskDefinition": {
+      "poc-sub-TD": {
         "Type": "AWS::ECS::TaskDefinition",
         "Properties": {
-          "Family": "MyTaskDefinition",
+          "Family": "poc-sub-TD",
           "ContainerDefinitions": [
             {
-              "Name": "MyContainer",
-              "Image": "my-ecr-repo-url/my-image:latest",
-              "Memory":  512,
-              "Cpu":  256,
+              "Name": "poc-sub-container",
+              "Image": "410677554255.dkr.ecr.us-east-1.amazonaws.com/poc-subtitulos:latest",
+              "Memory":  4096,
+              "Cpu":  2048,
               "PortMappings": [
                 {
                   "ContainerPort":  514,
@@ -183,5 +193,51 @@
             "FARGATE"
           ],
           "NetworkMode": "awsvpc",
-          "ExecutionRoleArn": "```
-  
+          "ExecutionRoleArn": "arn:aws:iam::410677554255:role/ecsTaskExecutionRole"
+        }
+      },
+      "poc-sub-cluster": {
+        "Type": "AWS::ECS::Cluster",
+        "Properties": {
+          "ClusterName": "poc-sub-cluster"
+        }
+      },
+      "poc-sub-service": {
+        "Type": "AWS::ECS::Service",
+        "Properties": {
+          "Cluster": {
+            "Ref": "poc-sub-cluster"
+          },
+          "DesiredCount":  1,
+          "LaunchType": "FARGATE",
+          "NetworkConfiguration": {
+            "AwsvpcConfiguration": {
+              "AssignPublicIp": "ENABLED",
+              "Subnets": [
+                {
+                  "Ref": "poc-sub"
+                }
+              ],
+              "SecurityGroups": [
+                {
+                  "Ref": "poc-sub-SG"
+                }
+              ]
+            }
+          },
+          "TaskDefinition": {
+            "Ref": "poc-sub-TD"
+          },
+          "LoadBalancers": [
+            {
+              "TargetGroupArn": {
+                "Ref": "poc-sub-TG"
+              },
+              "ContainerName": "poc-sub-container",
+              "ContainerPort":  514
+            }
+          ]
+        }
+      }
+    }
+  }

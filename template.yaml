@@ -1,0 +1,134 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  media-flow-sub:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock:   10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: media-flow-sub
+  poc-sub:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref media-flow-sub
+      CidrBlock:   10.0.1.0/24
+      AvailabilityZone: us-east-1a
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: poc-sub
+  poc-sub-IG:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: poc-sub-IG
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref media-flow-sub
+      InternetGatewayId: !Ref poc-sub-IG
+  poc-sub-RT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref media-flow-sub
+      Tags:
+        - Key: Name
+          Value: poc-sub-RT
+  poc-sub-RTA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref poc-sub
+      RouteTableId: !Ref poc-sub-RT
+  poc-sub-Route:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref poc-sub-RT
+      DestinationCidrBlock:   0.0.0.0/0
+      GatewayId: !Ref poc-sub-IG
+  poc-sub-SG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow all inbound traffic
+      SecurityGroupIngress:
+        - IpProtocol: udp
+          FromPort:   514
+          ToPort:   514
+          CidrIp:   0.0.0.0/0
+      VpcId: !Ref media-flow-sub
+      Tags:
+        - Key: Name
+          Value: poc-sub-SG
+  poc-sub-NLB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      Type: network
+      Subnets:
+        - !Ref poc-sub
+      Tags:
+        - Key: Name
+          Value: poc-sub-NLB
+  poc-sub-TG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds:   30
+      HealthCheckTimeoutSeconds:   5
+      HealthyThresholdCount:   3
+      UnhealthyThresholdCount:   3
+      Port:   514
+      Protocol: UDP
+      VpcId: !Ref media-flow-sub
+      Tags:
+        - Key: Name
+          Value: poc-sub-TG
+  poc-sub-List:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !GetAtt poc-sub-TG.TargetGroupArn
+      LoadBalancerArn: !GetAtt poc-sub-NLB.LoadBalancerArn
+      Port:   514
+      Protocol: UDP
+  poc-sub-TD:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: poc-sub-TD
+      ContainerDefinitions:
+        - Name: poc-sub-container
+          Image:   410677554255.dkr.ecr.us-east-1.amazonaws.com/poc-subtitulos:latest
+          Memory:   4096
+          Cpu:   2048
+          PortMappings:
+            - ContainerPort:   514
+              Protocol: udp
+      RequiresCompatibilities:
+        - FARGATE
+      NetworkMode: awsvpc
+      ExecutionRoleArn: arn:aws:iam::410677554255:role/ecsTaskExecutionRole
+  poc-sub-cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: poc-sub-cluster
+  poc-sub-service:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref poc-sub-cluster
+      DesiredCount:   1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref poc-sub
+          SecurityGroups:
+            - !Ref poc-sub-SG
+      TaskDefinition: !Ref poc-sub-TD
+      LoadBalancers:
+        - TargetGroupArn: !GetAtt poc-sub-TG.TargetGroupArn
+          ContainerName: poc-sub-container
+          ContainerPort:   514
