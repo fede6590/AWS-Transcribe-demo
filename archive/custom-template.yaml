@@ -1,5 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
+Description: 'TRS Media - Flow: PoC Subtitles'
+
+
 Resources:
+
   MediaFlowSub:
     Type: AWS::EC2::VPC
     Properties:
@@ -9,6 +13,7 @@ Resources:
       Tags:
         - Key: Name
           Value: MediaFlowSub
+
   PocSub:
     Type: AWS::EC2::Subnet
     Properties:
@@ -19,17 +24,20 @@ Resources:
       Tags:
         - Key: Name
           Value: PocSub
+
   PocSubIG:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
           Value: PocSubIG
+
   AttachGateway:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       VpcId: !Ref MediaFlowSub
       InternetGatewayId: !Ref PocSubIG
+
   PocSubRT:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -37,11 +45,13 @@ Resources:
       Tags:
         - Key: Name
           Value: PocSubRT
+
   PocSubRTA:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PocSub
       RouteTableId: !Ref PocSubRT
+
   PocSubRoute:
     Type: AWS::EC2::Route
     DependsOn: AttachGateway
@@ -49,6 +59,7 @@ Resources:
       RouteTableId: !Ref PocSubRT
       DestinationCidrBlock:   0.0.0.0/0
       GatewayId: !Ref PocSubIG
+
   PocSubSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -62,6 +73,7 @@ Resources:
       Tags:
         - Key: Name
           Value: PocSubSG
+
   PocSubNLB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
@@ -72,6 +84,7 @@ Resources:
       Tags:
         - Key: Name
           Value: PocSubNLB
+
   PocSubTG:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:

@@ -1,0 +1,1572 @@
+Description: '(SO0052) - Live Streaming with Automated Multi-Language Subtitles generated with AWS Transcribe Streaming (Version v2.0.0)'
+
+Parameters:
+
+  InputType:
+    Description: Specify the input type for MediaLive (default parameters are for the demo video)
+    Type: String
+    Default: URL_PULL
+    AllowedValues:
+      - RTP_PUSH
+      - RTMP_PUSH
+      - RTMP_PULL
+      - URL_PULL
+      - MEDIACONNECT
+
+  InputCodec:
+    Description: Specify the codec of the source stream for MediaLive (AVC/HEVC/MPEG2)
+    Type: String
+    Default: AVC
+    AllowedValues:
+      - AVC
+      - HEVC
+      - MPEG2
+
+  InputRes:
+    Description: Specify the Encoding Profile to use for MediaLive
+    Type: String
+    Default: 1080
+    AllowedValues:
+      - 1080
+
+  InputCIDR:
+    Description: For RTP and RTMP PUSH input types ONLY, specify the CIDR Block for the MediaLive SecurityGroup. Input security group restricts access to the input and prevents unauthorized third parties from pushing content into a channel that is associated with that input.
+    Type: String
+    Default: ""
+
+  PriPullURL:
+    Description: Specify the primary source URL for the PULL input stream
+    Type: String
+    Default: "https://d15an60oaeed9r.cloudfront.net/live_stream_v2/sports_reel_with_markers.m3u8"
+
+  PriPullUser:
+    Description: For URL PULL input type ONLY, if basic authentication is enabled on the source stream enter the username
+    Type: String
+    Default: ""
+
+  PriPullPass:
+    Description: For URL PULL input type ONLY, if basic authentication is enabled on the source stream enter the password
+    Type: String
+    Default: ""
+
+  PriMediaConnectArn:
+    Description: Specify the Arn for MediaConnect as a source
+    Type: String
+    Default: ""
+
+  ChannelStart:
+    Description: If your source is ready to stream select true, this wil start the MediaLive Channel as part of the deployment. If you select false you will need to manually start the MediaLive Channel when your source is ready.
+    Type: String
+    Default: Yes
+    AllowedValues:
+      - Yes
+      - No
+  
+  TranscribeLanguage:
+    Description: If selecting a language other than English en-US modify the AWS Medialive channel first output caption Name Modifier from _en to the language you choose here. (Example _es for es-US Spanish) 
+    Type: String
+    Default: en-US
+    AllowedValues:
+      - en-US
+      - es-US
+      - de-DE
+      - ja-JP
+      - pt-BR
+      - it-IT
+
+  CustomVocabulary:
+    Description: Custom Vocabulary for Amazon Transcribe. Make sure to make your Custom Vocabulary in the same region you deploy.
+    Type: String
+    Default: ""
+
+  VocabularyFilter:
+    Description: Name of your Vocabulary Filter for Amazon Transcribe. Use a vocabulary filter to filter unwanted words in real-time streams.
+    Type: String
+    Default: ""
+
+Metadata:
+    AWS::CloudFormation::Interface:
+        ParameterGroups:
+            -
+              Label:
+                default: Deployment Options
+              Parameters:
+                - Code
+            -
+              Label:
+                default: LIVE STREAM SOURCE
+              Parameters:
+                - InputType
+            -
+              Label:
+                default: URL_PULL CONFIGURATION
+              Parameters:
+                - PriPullURL
+                - PriPullUser
+                - PriPullPass
+            -
+              Label:
+                default: RTP_PUSH / RTMP_PUSH CONFIGURATION
+              Parameters:
+                - InputCIDR
+            -
+              Label:
+                default: MEDIACONNECT SOURCE TYPE
+              Parameters:
+                - PriMediaConnectArn
+            -
+              Label:
+                default: SUBTITLES CONFIG USING AMAZON TRANSCRIBE
+              Parameters:
+                - TranscribeLanguage
+                - CustomVocabulary
+                - VocabularyFilter
+            -
+              Label:
+                default: ENCODING OPTIONS
+              Parameters:
+                - InputCodec
+                - InputRes
+                - ChannelStart
+
+        ParameterLabels:
+          InputType:
+            default: Source Input Type
+          InputCodec:
+            default: Source Codec
+          InputRes:
+            default: Encoding Profile
+          InputCIDR:
+            default: Input Security Group CIDR Block (REQUIRED)
+          PriPullURL:
+            default: Source URL (REQUIRED)
+          PriPullUser:
+            default: Source Username (OPTIONAL)
+          PriPullPass:
+            default: Source Password (OPTIONAL)
+          Code:
+            default: Source Code
+          PriMediaConnectArn:
+            default: MediaConnect Arn (OPTIONAL) 
+          ChannelStart:
+            default: Start MediaLive Channel
+          TranscribeLanguage: 
+            default: Input audio language of your video stream for Amazon Transcribe Streaming.  
+          CustomVocabulary:
+            default: Custom Vocabulary for Amazon Transcribe (Optional)
+          VocabularyFilter:
+            default: Vocabulary Filter name for Amazon Transcribe (Optional)
+          
+
+Conditions:
+    Metrics: !Equals [ !FindInMap [AnonymousData,SendAnonymousData,Data], Yes]
+    Start: !Equals [ !Ref ChannelStart , Yes ]
+
+Mappings: 
+  EcsAmiList: 
+    us-east-2:
+      ami: ami-0583ca2f3ce809fcb
+    us-east-1:
+      ami: ami-0128839b21d19300e
+    us-west-1:
+      ami: ami-0ac6a4a6e7e0949c4
+    us-west-2:
+      ami: ami-030c9d6616d98227e
+    ap-northeast-1:
+      ami: ami-08c834e58473d808d
+    ap-northeast-2:
+      ami: ami-0c0c0b030baf86093
+    ap-south-1:
+      ami: ami-01ab67467126a45fb
+    ap-southeast-1:
+      ami: ami-0791c84a135845cef
+    ap-southeast-2:
+      ami: ami-0579b3efbc3a6c3e2
+    ca-central-1:
+      ami: ami-0d0785328bd0eb34a
+    eu-central-1:
+      ami: ami-039bcbdcc961c4e81
+    eu-north-1:
+      ami: ami-0b9b6326bd1e30ce4
+    eu-west-1:
+      ami: ami-0383e6ac19943cf6a
+    eu-west-2:
+      ami: ami-0491c71e39d336e96
+    eu-west-3:
+      ami: ami-06068eac7923b976b
+    sa-east-1:
+      ami: ami-0a339e14c13e704df
+
+  AnonymousData:
+    SendAnonymousData:
+      Data: Yes
+  
+  SourceCode:
+    General:
+      S3Bucket: "solutions"
+      KeyPrefix: live-streaming-with-automated-multi-language-subtitling/v2.0.0
+
+Resources:
+  MediaLiveInput:
+    Type: Custom::MediaLiveInput
+    Properties:
+      ServiceToken: !GetAtt CustomResource.Arn
+      Resource: MediaLiveInput
+      StreamName: !Sub ${AWS::StackName}-livestream
+      Type: !Ref InputType
+      Cidr: !Ref InputCIDR
+      PriUrl: !Ref PriPullURL
+      PriUser: !Ref PriPullUser
+      PriPass: !Ref PriPullPass
+      PriMediaConnectArn: !Ref PriMediaConnectArn
+
+  MediaLiveChannel:
+    DependsOn: MediaLiveInput
+    DependsOn: MediaPackageChannel
+    Type: Custom::MediaLiveChannel
+    Properties:
+      ServiceToken: !GetAtt CustomResource.Arn
+      Resource: MediaLiveChannel
+      Name: !Sub ${AWS::StackName}-livestream
+      Resolution: !Ref InputRes
+      Codec: !Ref InputCodec
+      Role: !GetAtt MediaLiveRole.Arn
+      InputId: !GetAtt MediaLiveInput.Id
+      Type: !Ref InputType
+      MediaPackagePriUrl:  !Sub https://${LambdaAtEdgeCloudFrontDistributionPipe0.DomainName}${MediaPackageChannel.PrimaryUrlPath}
+      MediaPackagePriUser: !GetAtt MediaPackageChannel.PrimaryUser
+      UDPAudioPriUrl: !Sub "udp://${ElasticLoadBalancerPipe0.DNSName}:7950"
+
+  MediaLiveChannelStart:
+    DependsOn: MediaLiveChannel
+    Condition: Start
+    Type: Custom::MediaLiveChannelStart
+    Properties:
+      ServiceToken: !GetAtt CustomResource.Arn
+      Resource: MediaLiveChannelStart
+      ChannelId: !GetAtt MediaLiveChannel.ChannelId
+
+  MediaLiveRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - "medialive.amazonaws.com"
+            Action:
+              - sts:AssumeRole
+
+  MediaLiveRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref MediaLiveRole
+      PolicyName: !Sub "${AWS::StackName}-mediatranscode-role"
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action:
+              - ssm:DescribeParameters
+              - ssm:GetParameter
+              - ssm:GetParameters
+              - ssm:PutParameter
+            Resource:
+              - !Join ["", ["arn:aws:ssm:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":parameter/*"]]
+          # feature/P20903447 MediaConnect support
+          - Effect: Allow
+            Action:
+              - mediaconnect:ManagedDescribeFlow
+              - mediaconnect:ManagedAddOutput
+              - mediaconnect:ManagedRemoveOutput
+            Resource:
+              - !Join ["", ["arn:aws:mediaconnect:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":*"]]
+
+  MediaPackageChannel:
+    Type: Custom::MediaPackageChannel
+    Properties:
+      ServiceToken: !GetAtt CustomResource.Arn
+      Resource: MediaPackageChannel
+      ChannelId: !Sub ${AWS::StackName}-livestream
+
+  MediaPackageHlsEndpoint:
+    DependsOn: MediaPackageChannel
+    Type: Custom::MediaPackageHlsEndpoint
+    Properties:
+      ServiceToken: !GetAtt CustomResource.Arn
+      Resource: MediaPackageEndPoint
+      EndPoint: HLS
+      SegmentDurationSeconds: 2
+      ChannelId: !GetAtt MediaPackageChannel.ChannelId
+
+  MediaPackageDashEndpoint:
+    DependsOn: MediaPackageChannel
+    Type: Custom::MediaPackageDashEndpoint
+    Properties:
+      ServiceToken: !GetAtt CustomResource.Arn
+      Resource: MediaPackageEndPoint
+      EndPoint: DASH
+      ChannelId: !GetAtt MediaPackageChannel.ChannelId
+
+  MediaPackageMssEndpoint:
+    DependsOn: MediaPackageChannel
+    Type: Custom::MediaPackageMssEndpoint
+    Properties:
+      ServiceToken: !GetAtt CustomResource.Arn
+      Resource: MediaPackageEndPoint
+      EndPoint: MSS
+      ChannelId: !GetAtt MediaPackageChannel.ChannelId
+
+  CustomResourceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: !Sub "${AWS::StackName}-custom-resource"
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Join ["", ["arn:aws:logs:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":log-group:/aws/lambda/*"]]
+              - Effect: Allow
+                Action:
+                  - medialive:createInputSecurityGroup
+                  - medialive:describeInput
+                  - medialive:createInput
+                  - medialive:deleteInput
+                  - medialive:stopChannel
+                  - medialive:createChannel
+                  - medialive:deleteChannel
+                  - medialive:deleteInputSecurityGroup
+                  - medialive:describeChannel
+                  - medialive:startChannel
+                  - medialive:createTags 
+                  - medialive:deleteTags
+
+
+                Resource:
+                    - !Join ["", ["arn:aws:medialive:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":*"]]
+              - Effect: Allow
+                Action:
+                  - mediapackage:createChannel
+                  - mediapackage:deleteChannel
+                  - mediapackage:listOriginEndpoints
+                  - mediapackage:deleteOriginEndpoint
+                  - mediapackage:createOriginEndpoint
+
+                Resource:
+                    - !Join ["", ["arn:aws:mediapackage:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":*"]]
+              - Effect: Allow
+                Action:
+                  - ssm:PutParameter
+                Resource:
+                  - !Join ["", ["arn:aws:ssm:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":parameter/*"]]
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource:
+                  -  !GetAtt MediaLiveRole.Arn
+
+  CustomResource:
+    Type: AWS::Lambda::Function
+    # DeletionPolicy: Retain
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-livestream-custom-resources
+      Description: Used to deploy custom resources and send AnonymousData
+      Handler: lambda.handler
+      Role: !GetAtt CustomResourceRole.Arn
+      Code:
+        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
+        S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],  "custom-resource-py.zip"]]
+      Runtime:  python3.9
+      Timeout: 180
+
+################################################
+# Resources needed for Transcriber ECS Instance Pipe0 
+################################################
+  TranscriberECSClusterPipe0:
+    Type: AWS::ECS::Cluster
+
+  TranscriberECSServicePipe0:
+    DependsOn: 
+      - ElasticLoadBalancerUDPListenerPipe0
+      - ElasticLoadBalancerTargetGroupPipe0
+      - EcsInstanceAutoScalingGroupPipe0
+    Type: 'AWS::ECS::Service'
+    Properties:
+      Cluster: !Ref TranscriberECSClusterPipe0
+      ServiceName: !Sub '${AWS::StackName}-TranscriberServicePipe0'
+      LaunchType: EC2
+      DesiredCount: 1
+      Role: !Ref TranscriberECSServiceEC2Role
+      HealthCheckGracePeriodSeconds: 2147483647
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+      TaskDefinition: !Ref TranscriberECSTaskDefinitionPipe0
+      LoadBalancers:
+        - ContainerName: !Sub '${AWS::StackName}-Container'
+          ContainerPort: 7950
+          TargetGroupArn: !Ref ElasticLoadBalancerTargetGroupPipe0
+
+
+  TranscriberECSTaskDefinitionPipe0:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      Cpu: 256
+      Memory: 512
+      NetworkMode: bridge
+      Family: !Sub '${AWS::StackName}-TaskDefinition'
+      ExecutionRoleArn: !Ref ExecutionRole
+      TaskRoleArn: !Ref TaskRole
+      ContainerDefinitions:
+        - Name: !Sub '${AWS::StackName}-Container'
+          Cpu: 256
+          Memory: 512
+          Image: 'awsmediatools/livetranscribe:v1.1'
+          Environment:
+            - Name: REGION
+              Value: !Ref 'AWS::Region'
+            - Name: TABLE_NAME
+              Value: !Ref CaptionsDynamoTable
+            - Name: SNS_TOPIC_ARN
+              Value: !Ref CallAWSTranslateSNS
+            - Name: ID_PIPE
+              Value: "pipe0"
+            - Name: VOCABULARY_NAME
+              Value: !Ref CustomVocabulary
+            - Name: VOCABULARY_FILTER_NAME
+              Value: !Ref VocabularyFilter
+            - Name: VOCABULARY_FILTER_METHOD
+              Value: "remove"
+            - Name: LANGUAGE_CODE
+              Value: !Ref TranscribeLanguage
+
+          PortMappings:
+              # Port used for UDP audio.
+            - ContainerPort: 7950
+              HostPort: 7950
+              Protocol: udp
+              # For health checks from ELB
+            - ContainerPort: 8080
+              HostPort: 8080
+              Protocol: tcp
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-region: !Ref AWS::Region
+              awslogs-group: !Ref LogGroupPipe0
+              awslogs-stream-prefix: ecs
+              
+                  
+  LogGroupPipe0:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ['', [/ecs/, !Ref 'AWS::StackName', TranscriberECSTaskDefinitionPipe0]]
+
+############################################
+# Auto Scaling group for ECS Instance
+############################################
+
+  EcsInstanceAutoScalingLaunchConfigurationPipe0:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: !FindInMap [EcsAmiList, !Ref "AWS::Region", ami]
+      InstanceType: t2.small
+      AssociatePublicIpAddress: true
+      IamInstanceProfile: !Ref EcsInstanceProfile
+      SecurityGroups: 
+        - !Ref ContainerSecurityGroup
+      BlockDeviceMappings:
+      - DeviceName: /dev/xvdcz
+        Ebs:
+         VolumeSize: 22
+         VolumeType: gp2
+      UserData:
+        Fn::Base64: 
+          !Sub |
+            #!/bin/bash -xe
+            mkdir -p /etc/ecs
+            echo ECS_CLUSTER=${TranscriberECSClusterPipe0} >> /etc/ecs/ecs.config
+
+
+  EcsInstanceAutoScalingGroupPipe0:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier: 
+        - !Ref SubnetA
+      LaunchConfigurationName: !Ref EcsInstanceAutoScalingLaunchConfigurationPipe0
+      MinSize: 0
+      MaxSize: 1
+      DesiredCapacity: 1
+      Tags:
+        -
+          Key: Name
+          Value: !Sub "ECS Instance - ${AWS::StackName}"
+          PropagateAtLaunch: 'true'
+        -
+          Key: Description
+          Value: "This instance is the part of the Auto Scaling group which was created through ECS"
+          PropagateAtLaunch: 'true'
+
+############################################
+# Load Balancer NBL Setup for ECS Instance
+############################################
+
+  ElasticLoadBalancerPipe0:
+      Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+      Metadata:
+        cfn_nag:
+          rules_to_suppress:
+            - id: W52
+              reason: "ElasticLoadBalancingV2 does not have a logging option in CloudFormation."
+      Properties:
+        Type: network
+        Scheme: internet-facing
+        IpAddressType: ipv4
+        Subnets:
+          - !Ref SubnetA
+
+
+  ElasticLoadBalancerUDPListenerPipe0:
+   DependsOn: ElasticLoadBalancerTargetGroupPipe0
+   Type: "AWS::ElasticLoadBalancingV2::Listener"
+   Properties:
+     DefaultActions:
+       - Type: forward
+         TargetGroupArn: !Ref ElasticLoadBalancerTargetGroupPipe0
+     LoadBalancerArn: !Ref ElasticLoadBalancerPipe0
+     Port: 7950
+     Protocol: UDP
+
+# Target Group for the load balancer
+  ElasticLoadBalancerTargetGroupPipe0:
+    DependsOn: ElasticLoadBalancerPipe0
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      TargetType: instance
+      Protocol: UDP
+      Port: 7950
+      HealthCheckEnabled: true
+      HealthCheckPort: 8080
+      HealthCheckProtocol: TCP
+      VpcId: !Ref VPC
+
+################################################
+# End of ECS Container setup and Elastic Load Balancer Setup
+################################################
+
+  # Allows the ECS service to spin up EC2 instances.
+  TranscriberECSServiceEC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2008-10-17
+        Statement:
+          - Sid: ''
+            Effect: Allow
+            Principal:
+              Service: ecs.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceRole'
+
+############################################
+# VPC needed to create and run the ECS Transcriber Instance
+############################################
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/24
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W60
+            reason: "VPC should have a flow log attached."
+
+  # VPC Flow Logging
+  VPCFlowLog:
+    Type: AWS::EC2::FlowLog
+    Properties:
+      DeliverLogsPermissionArn: !GetAtt VPCFlowLogRole.Arn
+      LogGroupName: FlowLogsGroup
+      ResourceId: !Ref VPC
+      ResourceType: VPC
+      TrafficType: ALL
+
+  #VPC Flow Logging role https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs-cwl.html
+  VPCFlowLogRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: "Allow"
+          Principal:
+            Service: "vpc-flow-logs.amazonaws.com"
+          Action: "sts:AssumeRole"
+
+  VPCFlowLogPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-VPCFlowLogRole-policy
+      Roles:
+        - !Ref VPCFlowLogRole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+              - logs:DescribeLogGroups
+              - logs:DescribeLogStreams
+            Resource:
+              !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/*
+
+  SubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.0.0/25
+      AvailabilityZone: !Select [ 0 , !GetAZs ]   # Get the first AZ in the list
+
+  # Setup networking resources for the public subnets. Containers
+  # The public subnets have public IP addresses and the routing table
+  # sends network traffic via the internet gateway.
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+  GatewayAttachement:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref 'VPC'
+      InternetGatewayId: !Ref 'InternetGateway'
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref 'VPC'
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: GatewayAttachement
+    Properties:
+      RouteTableId: !Ref 'PublicRouteTable'
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref 'InternetGateway'
+  PublicSubnetOneRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref SubnetA
+      RouteTableId: !Ref PublicRouteTable
+
+  # Here is the EC2 Autoscaling Configuration for ECS using EC2.
+  # Networking and security groups for the ECS Instance. 
+  ContainerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub ${AWS::StackName}
+      # VpcId: !If [ CreateSubnet1, !Ref Vpc, !Ref VpcId ]
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+          # 7950 UDP is for the audio input.
+          # MediaLive Channel A 
+        - IpProtocol: udp
+          FromPort: 7950
+          ToPort: 7950
+          CidrIp: !Sub ${MediaLiveChannel.EgressIpPipe0}/32
+          # 8080 TCP is for health checking for the NLB
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: !Sub ${MediaLiveChannel.EgressIpPipe0}/32
+
+      # This was added by SolutionBuilder CFN NAGs
+      SecurityGroupEgress:
+        - IpProtocol: udp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W5
+            reason: "Using open eggress so that AWS Transcribe Streaming has eggress access"
+          - id: W29
+            reason: "Using open eggress so that AWS Transcribe Streaming has eggress access"
+          - id: W36
+            reason: "Security group rules without a description obscure their purpose and may lead to bad practices in ensuring they only allow traffic from the ports and sources/destinations required."
+
+
+############################################
+# Roles needed to create and run the ECS Transcriber Instance
+############################################
+
+  EcsInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: "Allow"
+          Principal:
+            Service: "ec2.amazonaws.com"
+          Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+      - 'arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role'
+
+  EcsInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref EcsInstanceRole
+
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-TaskDefinitionExecutionRole
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "This role can be shared between different deployments."
+
+# Permissions for the ECS container.
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-TaskDefinitionTaskRole
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+      -
+        PolicyName: !Sub "${AWS::StackName}-TaskDefinitionTaskRole-Policy"
+        PolicyDocument:
+          Statement:
+            -
+              Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource:
+              # CHANGE THIS
+                - !Sub ${CaptionsDynamoTable.Arn}*
+            -
+              Effect: Allow
+              Action:
+                - sns:Publish
+              Resource:
+                # CHANGE THIS
+                - !Sub ${CallAWSTranslateSNS}*
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "This role can be shared between different two deployments."
+
+# AWS Transcribe Task Policy 
+  TranscribePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-dynamodb-policy
+      Roles:
+        - !Ref TaskRole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Action:
+              - transcribe:GetTranscriptionJob
+              - transcribe:GetVocabulary
+              - transcribe:ListVocabularies
+              - transcribe:StartStreamTranscription
+              - transcribe:StartStreamTranscriptionWebSocket
+              - transcribe:StartTranscriptionJob
+            Resource: "*"
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W12
+            reason: "Amazon Transcribe does not support specifying a resource ARN. That is why * is used. https://docs.aws.amazon.com/IAM/latest/UserGuide/list_amazontranscribe.html"
+
+  # SNS Topic that gets called when a translate to other languages needs to be done. 
+  CallAWSTranslateSNS:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-CallAWSTranslateSNSTopic'
+      Subscription:
+        - Protocol: lambda
+          Endpoint: !GetAtt SNSTriggerAWSTranslateLambda.Arn
+      KmsMasterKeyId: alias/aws/sns
+
+  InvokePermissionSNSTriggerAWSTranslateLambda:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref SNSTriggerAWSTranslateLambda
+      Principal: sns.amazonaws.com   
+
+  # Lambda function that is doing the Translation with AWS Translate. This is triggered by SNS triggers when the ECS Transcriber sees a new full non partial sentence. 
+  SNSTriggerAWSTranslateLambda:
+    Type: AWS::Lambda::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W58
+            reason: "SNSTriggerAWSTranslateLambda already has cloudwatch access from the SNSTriggerAWSTranslateLambdaRole."
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-SNSTriggerAWSTranslateLambda
+      Description: Triggered by an AWS SNS trigger when a full setence is transcribed. This function then translates it to other languages and writes them back to the database. 
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt SNSTriggerAWSTranslateLambdaRole.Arn
+      Code:
+        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
+        S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],  "SNSTriggerAWSTranslateLambda.zip"]]
+      Runtime:  python3.9
+      Timeout: 30
+      Environment:
+        Variables:
+          DYNAMO_TABLE: !Ref CaptionsDynamoTable
+          SOURCE_LANGUAGE: "en"
+          CAPTION_LANGUAGES: "en, es"
+
+  SNSTriggerAWSTranslateLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+
+  CloudWatchLogsPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-cloudwatch-policy
+      Roles:
+        - !Ref SNSTriggerAWSTranslateLambdaRole
+        - !Ref LambdaEdgeFunctionRole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/*
+
+  DynamoDbPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-dynamodb-policy
+      Roles:
+        - !Ref SNSTriggerAWSTranslateLambdaRole
+        - !Ref LambdaEdgeFunctionRole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Action:
+              - dynamodb:DeleteItem
+              - dynamodb:GetItem
+              - dynamodb:PutItem
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:UpdateItem
+            Resource:
+              - !Sub ${CaptionsDynamoTable.Arn}*
+
+  TranslatePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-awstranslate-policy
+      Roles:
+        - !Ref SNSTriggerAWSTranslateLambdaRole
+        - !Ref LambdaEdgeFunctionRole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Action:
+              - translate:TranslateText
+            # Amazon Translate does not support the resource ARN. That is why * is used. https://docs.aws.amazon.com/IAM/latest/UserGuide/list_amazontranslate.html
+            Resource: "*"
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W12
+            reason: "Amazon Translate does not support specifying a resource ARN. That is why * is used. https://docs.aws.amazon.com/IAM/latest/UserGuide/list_amazontranscribe.html"
+
+  CaptionsDynamoTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      # Added for encryption at rest.
+      SSESpecification:
+        SSEEnabled: true
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id_name
+          AttributeType: S
+        - AttributeName: id_status
+          AttributeType: S
+        - AttributeName: id_lang
+          AttributeType: S
+        - AttributeName: sort_starttime
+          AttributeType: N
+      KeySchema:
+        - AttributeName: id_name
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: id_status-sort_starttime-index
+          KeySchema:
+            - AttributeName: id_status
+              KeyType: HASH
+            - AttributeName: sort_starttime
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: id_lang-sort_starttime-index
+          KeySchema:
+            - AttributeName: id_lang
+              KeyType: HASH
+            - AttributeName: sort_starttime
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: timestamp_ttl
+        Enabled: true
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W78
+            reason: "DynamoDB table should have backup enabled, should be set using PointInTimeRecoveryEnabled. We do not need backup this data has a short TTL on it anyway."
+
+################################################
+# Resources are for the CloudFront Lambda@Edge configuration. 
+################################################
+
+  LambdaAtEdgeCloudFrontDistributionPipe0:
+      Type: AWS::CloudFront::Distribution
+      Metadata:
+        cfn_nag:
+          rules_to_suppress:
+            - id: W70
+              reason: "Cloudfront is allowing for TLS 1.1, since the Elemental Live products use this."
+            - id: W10
+              reason: "This is an internal CloudFront. PUT requests are done with authentication just so Lambda@Edge can be used."
+      Properties:
+        DistributionConfig:
+          Enabled: 'true'
+          Comment: !Sub '${AWS::StackName} - Lambda@Edge - Pipe0 Inserts captions in WebVTT files passing through to MediaPackage'
+          HttpVersion: http2
+          Origins:
+            - Id: MP-44e88ca212fa91fb 
+              DomainName: !GetAtt MediaPackageChannel.PrimaryUrlHostName
+              OriginPath: ""
+              CustomOriginConfig:
+                HTTPPort: 80
+                HTTPSPort: 443
+                OriginKeepaliveTimeout: 5
+                OriginProtocolPolicy: match-viewer
+                OriginReadTimeout: 30
+                OriginSSLProtocols:
+                  - TLSv1.1
+                  - TLSv1.2
+              OriginCustomHeaders:
+                - HeaderName: DYNAMO_INDEX
+                  HeaderValue: "id_lang-sort_starttime-index"
+                - HeaderName: DYNAMO_TABLE
+                  HeaderValue: !Ref CaptionsDynamoTable
+                - HeaderName: PIPE_ID
+                  HeaderValue: "pipe0"
+          CacheBehaviors:
+            - TargetOriginId: MP-44e88ca212fa91fb #This will need to be changed to MediaPackage Origin
+              LambdaFunctionAssociations:
+                - EventType: origin-request
+                  LambdaFunctionARN: !Join [ "",[ !GetAtt CustomDeployLambdaEdge.Arn , ":1"]]
+              ForwardedValues:
+                Headers: 
+                  - Authorization
+                QueryString: true
+                Cookies:
+                  Forward: none
+              PathPattern: "*.vtt"
+              ViewerProtocolPolicy: allow-all
+              AllowedMethods:
+                - POST
+                - HEAD
+                - PATCH
+                - DELETE
+                - PUT
+                - GET
+                - OPTIONS
+          DefaultCacheBehavior:
+            TargetOriginId: MP-44e88ca212fa91fb #This will need to be changed to MediaPackage Origin
+            ForwardedValues:
+              Headers: 
+                - Authorization
+              QueryString: true
+              Cookies:
+                Forward: none
+            ViewerProtocolPolicy: allow-all
+            AllowedMethods:
+              - POST
+              - HEAD
+              - PATCH
+              - DELETE
+              - PUT
+              - GET
+              - OPTIONS
+
+# This customresource Clicks the Add Body button in CloudFormation for VTT files. So the Lambda@Edge can access them.
+  CustomResourceCloudFrontIncludeBody:
+    DependsOn: LambdaAtEdgeCloudFrontDistributionPipe0
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt 'CustomResourceCloudFrontIncludeBodyLambda.Arn'
+      loglevel: debug
+      CloudFrontIDpipe0: !Ref LambdaAtEdgeCloudFrontDistributionPipe0
+
+  CustomResourceCloudFrontIncludeBodyLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Timeout: 300
+      Role: !GetAtt 'CustomResourceCloudFrontIncludeBodyExecutionRole.Arn'
+      Runtime: python3.9
+      Code:
+        ZipFile: |
+          import string
+          import logging
+          import boto3
+          import cfnresponse
+            
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def lambda_handler(event, context):
+              # Any variables that we want to return go here. 
+              responseData = {}
+              physicalResourceId = {}
+
+              if event['RequestType'] == 'Delete':
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+              if event['RequestType'] == 'Create' or event['RequestType'] == 'Update':
+                  try:
+                      if event["ResourceProperties"]["CloudFrontIDpipe0"]:
+                          cloudfrontid = event["ResourceProperties"]["CloudFrontIDpipe0"]
+                          click_add_body_button_cloudformation(cloudfrontid)
+                          responseData["CloudFrontIDpipe0"] = cloudfrontid
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData, physicalResourceId )
+                  except Exception as e:
+                      #sending FAILED signal to CloudFormation
+                      print(str(e))
+                      cfnresponse.send(event, context, cfnresponse.FAILED, responseData, physicalResourceId )
+                  return
+              
+
+          def click_add_body_button_cloudformation(cloudfront_distributionid):
+              client = boto3.client('cloudfront')
+              # Get distribution info
+              response = client.get_distribution_config(
+                  Id=cloudfront_distributionid
+              )
+              DistributionConfig = response["DistributionConfig"]
+              ETag = response["ETag"]
+
+              # Set the VTT IncludeBody field to True
+              DistributionConfig['CacheBehaviors']['Items'][0]['LambdaFunctionAssociations']['Items'][0]['IncludeBody'] = True
+              response = client.update_distribution(
+                  Id=cloudfront_distributionid,
+                  DistributionConfig=DistributionConfig,
+                  IfMatch=ETag
+              )
+
+  # Give this lambda access to Update a CloudFront Distribution.
+  CustomResourceCloudFrontIncludeBodyExecutionRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: "Role resource is not known."
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+          Condition: {}
+      Policies:
+        - PolicyName: AllowCloudFrontUpdateConfig
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                - cloudfront:UpdateDistribution
+                - cloudfront:UpdateCloudFrontOriginAccessIdentity
+                - cloudfront:GetDistributionConfig
+                Resource:
+                - !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${LambdaAtEdgeCloudFrontDistributionPipe0}
+              - Effect: Allow
+                Action:
+                - lambda:GetFunction
+                Resource: "*"
+                # - !Join ["", ["arn:aws:lambda:", "us-east-1" , ":", Ref: "AWS::AccountId", ":*"]]
+              
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+
+# This customresource Clicks the Add Body button in CloudFormation for VTT files. So the Lambda@Edge can access them.
+  CustomDeployLambdaEdge:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt 'CustomDeployLambdaEdgeLambda.Arn'
+      loglevel: debug
+      Name: !Sub ${AWS::StackName}-EdgeCaptionInserter
+      Role: !GetAtt LambdaEdgeFunctionRole.Arn
+      S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], "us-east-1"]]
+      S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],  "lambdaedge.zip"]]
+
+  CustomDeployLambdaEdgeLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Timeout: 600
+      Role: !GetAtt 'CustomDeployLambdaEdgeRole.Arn'
+      Runtime: python3.9
+      Code:
+        ZipFile: |
+            import string
+            import logging
+            import boto3
+            import cfnresponse
+
+            logger = logging.getLogger()
+            logger.setLevel(logging.INFO)
+
+            def lambda_handler(event, context):
+                # Any variables that we want to return go here. 
+                responseData = {}
+                physicalResourceId = ""
+
+                # Lambda@Edge requires us-east-1
+                client = boto3.client('lambda',region_name='us-east-1')
+
+                if event['RequestType'] == 'Delete':
+                    LambdaARN = event['PhysicalResourceId']
+                    # Delete the Lambda that was created.
+                    try:
+                        response = client.delete_function(
+                            FunctionName=LambdaARN
+                        )
+                        print(str(response))
+                    except Exception as e:
+                        print("Unable to delete replicated Lambda@Edge function delete manually.")
+                        print(str(e))
+                    
+                    cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+                if event['RequestType'] == 'Create' or event['RequestType'] == 'Update':
+                    try:
+                        # Here are attibutes returned.
+                        responseData = {}
+                        # Make a Lambda@Edge Lambda, get the Lambda ID and return it as the physicalResourceId
+                        # These are all the properties requiered by this lambda
+                        config = event['ResourceProperties']
+                        name = config['Name']
+                        role = config['Role']
+                        S3Bucket = config['S3Bucket']
+                        S3Key = config['S3Key']
+                        
+                        # Always deploy in the us-east-1 region.
+                        response = client.create_function(
+                            FunctionName=name,
+                            Runtime='python3.9',
+                            Role=role,
+                            Handler='lambda_function.lambda_handler',
+                            Code={
+                                'S3Bucket': S3Bucket,
+                                'S3Key': S3Key
+                            },
+                            Description='Lambda@Edge function that is used to insert captions into the MediaLive live stream.',
+                            Timeout=3,
+                            Publish=True
+                        )
+
+                        # Get the function ARN of the lambda for the PhisicalResourceID
+                        physicalResourceId = response['FunctionArn']
+                        responseData["Arn"] = response['FunctionArn']
+
+                        cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData, physicalResourceId )
+                    except Exception as e:
+                        #sending FAILED signal to CloudFormation
+                        print(str(e))
+                        cfnresponse.send(event, context, cfnresponse.FAILED, responseData, physicalResourceId )
+                    return
+
+# Give this lambda access to Update a CloudFront Distribution.
+# Change This IAM Role 
+  CustomDeployLambdaEdgeRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: "Role resource is not known."
+          - id: F38
+            reason: "This Lambda is creating a lambda that it has to pass it's role to."
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+          Condition: {}
+      Policies:
+        - PolicyName: AllowCloudFrontUpdateConfig
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                - lambda:CreateFunction
+                - lambda:DeleteFunction
+                Resource:
+                - !Join ["", ["", "*"]]
+              - Effect: Allow
+                Action:
+                - iam:PassRole
+                Resource:
+                - !Join ["", ["", "*"]]
+              - Effect: Allow
+                Action:
+                - s3:GetObject
+                Resource:
+                - !Join ["", ["arn:aws:s3:::", "*"]]
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  # Change this IAM Role
+  LambdaEdgeFunctionRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+          Path: "/"
+          ManagedPolicyArns:
+              - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+          AssumeRolePolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Sid: "AllowLambdaServiceToAssumeRole"
+                Effect: "Allow"
+                Action: 
+                  - "sts:AssumeRole"
+                Principal:
+                  Service: 
+                    - "lambda.amazonaws.com"
+                    - "edgelambda.amazonaws.com"
+
+
+# Lambda that turns ECS instance on and off when MediaLive Channel Starts and Stops. 
+  StartStopECSTranscribeServiceLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-StartStopECSTranscribeService
+      Description: Turns on and off the ECS Transcriber service when the MediaLive channel is started or stopped respectively. 
+      Role: !GetAtt 'StartStopECSTranscribeServiceLambdaRole.Arn'
+      Handler: index.lambda_handler
+      Runtime: python3.9
+      Timeout: 30
+      Environment:
+        Variables:
+          cluster_name_pipe0: !Ref TranscriberECSClusterPipe0
+          service_name_pipe0: !GetAtt TranscriberECSServicePipe0.Name
+          autoscaler_name_pipe0: !Ref EcsInstanceAutoScalingGroupPipe0
+          channel_id: !Ref MediaLiveChannel
+      Code:
+        ZipFile: |
+            import os
+            import json
+            import boto3
+            from pprint import pprint
+
+            CHANNEL_ID = os.environ['channel_id']
+
+            SERVICE_NAME_PIPE0 = os.environ['service_name_pipe0']
+            CLUSTER_NAME_PIPE0 = os.environ['cluster_name_pipe0']
+            AUTOSCALER_NAME_PIPE0 = os.environ['autoscaler_name_pipe0']
+
+            def lambda_handler(event, context):
+                # Sets AUTOSCALING_PIPE0 to 0 when the AWS MediaLive event is set to STOPPED and sets to 1 when RUNNING or STARTING
+                try:
+                    # alerts are stored into a DynamoDB table after some processing
+                    print(str(event["detail"]))
+                    if event["detail"]["channel_arn"].split(":")[-1] == CHANNEL_ID: 
+                        if event["detail"]["state"] == "STARTING" or event["detail"]["state"] == "RUNNING":
+                            # Set autoscaler to 1 and ECS service to 1.
+                            set_autoscaler_capacity(AUTOSCALER_NAME_PIPE0, 1)
+                            set_service_count(SERVICE_NAME_PIPE0, CLUSTER_NAME_PIPE0, 1)
+                        
+                        elif event["detail"]["state"] == "STOPPED":
+                            # Set autoscaler to 0 and ECS service to 0.
+                            set_service_count(SERVICE_NAME_PIPE0, CLUSTER_NAME_PIPE0, 0)
+                            set_autoscaler_capacity(AUTOSCALER_NAME_PIPE0, 0)
+                except Exception as e:
+                    print("Exception occured: " + str(e))
+
+            def set_autoscaler_capacity(autoscaler_name, capacity):
+                try:
+                    print("Setting EC2 Autoscaling named: " + str(autoscaler_name) + " To desired capacity: " + str(capacity))
+                    client = boto3.client('autoscaling')
+                    response = client.set_desired_capacity(
+                        AutoScalingGroupName=autoscaler_name,
+                        DesiredCapacity=capacity
+                    )
+                except Exception as e:
+                    print("EXCEPTION: " + str(e))
+
+            def set_service_count(service_name, cluster_name, capacity):
+                try: #Set ECS Service desiried count
+                    print("Setting service called: " + service_name + "\n And the cluster: " + cluster_name + "To Capacity: " + str(capacity))
+                    client = boto3.client('ecs')
+                    
+                    response = client.update_service(
+                        service=service_name,
+                        cluster=cluster_name,
+                        desiredCount=capacity
+                    )
+                except Exception as e:
+                    print("EXCEPTION: " + str(e))
+
+  StartStopECSTranscribeServiceLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: AllowCloudFrontUpdateConfig
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                - ecs:UpdateService
+                - autoscaling:SetDesiredCapacity
+                Resource: 
+                - !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:service/*
+                - !Sub arn:aws:autoscaling:${AWS::Region}:${AWS::AccountId}:autoScalingGroup/*
+                # "*" SFASDFSADFASDSDFASDASDAFSDAFASDF
+      Path: /
+     
+
+# CloudWatch event to invoke the Lambda when MediaLive is in the STARTING phase, or is STOPPED. 
+  StartStopECSTranscribeServiceLambdaEventRule: 
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: "MediaLive Start & Stop event rule for StartStopECSTranscribeServiceLambda"
+      EventPattern: 
+        source: 
+          - "aws.medialive"
+        detail-type: 
+          - "MediaLive Channel State Change"
+      State: "ENABLED"
+      Targets: 
+        - Arn: !GetAtt StartStopECSTranscribeServiceLambda.Arn
+          Id: !Sub ${AWS::StackName}StartStopECSLambdaRule
+    
+  PermissionForEventsToInvokeLambda: 
+    Type: AWS::Lambda::Permission
+    Properties: 
+      FunctionName: !Ref StartStopECSTranscribeServiceLambda
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt StartStopECSTranscribeServiceLambdaEventRule.Arn
+
+
+# MediaPackage Viewing CloudFront Distribution Setup. This is what viewers use to watch the stream through MediaPackage. 
+  CloudFront:
+    Type: AWS::CloudFront::Distribution
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W70
+            reason: "Cloudfront is allowing for TLS 1.1, since I think our Elemetnal Live product may use this."
+          - id: W10
+            reason: "This is an internal CloudFront. PUT requests are done with authentication just so Lambda@Edge can be used."
+    Properties:
+      DistributionConfig:
+        Origins:
+          - Id: hls
+            DomainName: !GetAtt MediaPackageHlsEndpoint.DomainName
+            OriginPath: /out/v1
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+          - Id: dash
+            DomainName: !GetAtt MediaPackageDashEndpoint.DomainName
+            OriginPath: /out/v1
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+          - Id: mss
+            DomainName: !GetAtt MediaPackageMssEndpoint.DomainName
+            OriginPath: /out/v1
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+        Enabled: 'true'
+        DefaultCacheBehavior:
+          TargetOriginId: hls
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          ForwardedValues:
+            QueryString: 'true'
+            Cookies:
+              Forward: all
+            Headers:
+              - Origin
+              - Access-Control-Request-Method
+              - Access-Control-Request-Header
+          ViewerProtocolPolicy: allow-all
+        CacheBehaviors:
+          - TargetOriginId: hls
+            PathPattern: MediaPackageHlsEndpoint.Path
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            ForwardedValues:
+              QueryString: 'true'
+              Cookies:
+                Forward: all
+              Headers:
+                - Origin
+                - Access-Control-Request-Method
+                - Access-Control-Request-Headers
+            ViewerProtocolPolicy: allow-all
+          - TargetOriginId: dash
+            PathPattern: MediaPackageDashEndpoint.Path
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            ForwardedValues:
+              QueryString: 'true'
+              Cookies:
+                Forward: all
+              Headers:
+                - Origin
+                - Access-Control-Request-Method
+                - Access-Control-Request-Headers
+            ViewerProtocolPolicy: allow-all
+          - TargetOriginId: mss
+            PathPattern: MediaPackageMssEndpoint.Path
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            ForwardedValues:
+              QueryString: 'true'
+              Cookies:
+                Forward: all
+              Headers:
+                - Origin
+                - Access-Control-Request-Method
+                - Access-Control-Request-Headers
+            SmoothStreaming: 'true'
+            ViewerProtocolPolicy: allow-all
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: 'true'
+
+# Outputs
+Outputs:
+  MediaLivePrimaryEndpoint:
+    Description: Primary MediaLive input Url
+    Value: !GetAtt MediaLiveInput.EndPoint1
+
+  CloudFrontHlsPlaybackUrl:
+    Description: HLS CloudFront URL
+    Value: !Sub https://${CloudFront.DomainName}${MediaPackageHlsEndpoint.Manifest}
+
+  CloudFrontDashPlaybackUrl:
+    Description: DASH CloudFront URL
+    Value: !Sub https://${CloudFront.DomainName}${MediaPackageDashEndpoint.Manifest}
+
+  CloudFrontMssPlaybackUrl:
+    Description: MSS CloudFront URL
+    Value: !Sub https://${CloudFront.DomainName}${MediaPackageMssEndpoint.Manifest}

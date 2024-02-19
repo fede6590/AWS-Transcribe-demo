@@ -8,15 +8,11 @@ from amazon_transcribe.handlers import TranscriptResultStreamHandler
 from amazon_transcribe.model import TranscriptEvent
 
 REGION = "us-east-1"
-SOURCE = os.environ.get('SOURCE')
 
-LOGLEVEL = os.environ.get('LOGLEVEL')
-if LOGLEVEL is None:
-    LOGLEVEL = 'warning'
+SOURCE = os.environ.get('SOURCE', 'pipe:0')
+LOGLEVEL = os.environ.get('LOGLEVEL', 'warning')
+VERBOSE = os.environ.get('VERBOSE', 'error')
 
-VERBOSE = os.environ.get('VERBOSE')
-if VERBOSE is None:
-    VERBOSE = 'error'
 
 CHUNK_DURATION_MS = 100  # Set between 50 and 200ms for real-time applications
 SAMPLE_RATE = 16000
@@ -62,6 +58,7 @@ async def basic_transcribe():
         command = [
             'ffmpeg',
             '-i', SOURCE,
+            '-tune', 'zerolatency',
             '-vn',
             '-acodec', 'pcm_s16le',
             '-ar', str(SAMPLE_RATE),
