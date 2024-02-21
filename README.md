@@ -1,4 +1,4 @@
-# AWS Transcribe on HLS/DASH MediaPackage endpoint
+# AWS Transcribe Streaming client for HLS/DASH
 
 Simply run:
 ```
