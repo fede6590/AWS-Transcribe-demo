@@ -8,7 +8,7 @@ read -sp "Enter your AWS Session Token (if you have one): " AWS_SESSION_TOKEN
 echo
 
 # Prompt for the source URL or local path
-read -p "Enter the source URL or local path: " URL
+read -p "Enter the source URL or local path: " SOURCE
 
 ### FFMPEG FLAGS
 LOGLEVEL="warning"  # debug, info, warning (default param), fatal
@@ -27,7 +27,7 @@ docker run \
   --env AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
   --env AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
   --env AWS_SESSION_TOKEN="${AWS_SESSION_TOKEN}" \
-  --env URL="${URL}" \
+  --env SOURCE="${SOURCE}" \
   --env LOGLEVEL="${LOGLEVEL}" \
   --env VERBOSE="${VERBOSE}" \
   "$CONTAINER_IMAGE"

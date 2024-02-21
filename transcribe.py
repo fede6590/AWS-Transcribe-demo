@@ -9,7 +9,7 @@ from amazon_transcribe.model import TranscriptEvent
 
 REGION = "us-east-1"
 
-URL = os.environ.get('URL', 'pipe:0')
+SOURCE = os.environ.get('SOURCE', 'pipe:0')
 LOGLEVEL = os.environ.get('LOGLEVEL', 'warning')
 VERBOSE = os.environ.get('VERBOSE', 'error')
 
@@ -57,7 +57,7 @@ async def basic_transcribe():
     async def write_chunks():
         command = [
             'ffmpeg',
-            '-i', str(URL),
+            '-i', str(SOURCE),
             '-tune', 'zerolatency',
             '-vn',
             '-acodec', 'pcm_s16le',
