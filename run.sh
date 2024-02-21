@@ -15,7 +15,7 @@ LOGLEVEL="warning"  # debug, info, warning (default param), fatal
 VERBOSE="error" # quiet, error, panic
 
 ### DOCKER
-CONTAINER_IMAGE="mfs-poc"
+CONTAINER_IMAGE="transcribe-demo"
 
 # Check if the Docker image exists
 if ! docker image inspect "$CONTAINER_IMAGE" > /dev/null  2>&1; then
