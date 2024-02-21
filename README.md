@@ -6,7 +6,7 @@ Simply run:
 ```
 and follow the instructions.
 
-You'll be asked to pass your AWS credentials and the HLS/DASH URL (or local path).
+You'll be asked to pass your AWS credentials and the URL (or local path) to the HLS/DASH manifest.
 
 You can find some free HLS & DASH manifest example test URLs here: \
 https://ottverse.com/ree-mpeg-dash-mpd-manifest-example-test-urls/ \
