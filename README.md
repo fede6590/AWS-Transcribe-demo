@@ -1,4 +1,4 @@
-# AWS Transcribe Streaming client for HLS/DASH
+# AWS Transcribe streaming client for HLS/DASH
 
 Simply run:
 ```
