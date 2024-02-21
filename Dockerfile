@@ -12,9 +12,9 @@ RUN apt-get update && apt-get install -y \
 USER dev
 
 COPY requirements.txt .
-COPY hls-stream.py .
+COPY transcribe.py .
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --no-cache-dir -r requirements.txt
 
-CMD ["python", "hls-stream.py"]
+CMD ["python", "transcribe.py"]

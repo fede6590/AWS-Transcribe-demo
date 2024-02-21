@@ -1,8 +1,5 @@
 Description: 'Live Streaming Subtitling with AWS Transcribe'
 
-############
-############
-############
 
 Parameters:
 
@@ -88,10 +85,6 @@ Parameters:
     Type: String
     Default: ""
 
-############
-############
-############
-
 Metadata:
     AWS::CloudFormation::Interface:
         ParameterGroups:
@@ -165,17 +158,11 @@ Metadata:
           VocabularyFilter:
             default: Vocabulary Filter name for Amazon Transcribe (Optional)
 
-############
-############
-############
 
 Conditions:
     Metrics: !Equals [ !FindInMap [AnonymousData,SendAnonymousData,Data], Yes]
     Start: !Equals [ !Ref ChannelStart , Yes ]
 
-############
-############
-############
 
 Mappings: 
   EcsAmiList: 
@@ -212,18 +199,15 @@ Mappings:
     sa-east-1:
       ami: ami-0a339e14c13e704df
 
-  AnonymousData:
+  # AnonymousData:
     SendAnonymousData:
       Data: Yes
   
-  SourceCode:
+  # SourceCode:
     General:
       S3Bucket: "solutions"
-      KeyPrefix: live-streaming-with-automated-multi-language-subtitling/v2.0.0
+      KeyPrefix: AWS-Transcribe-for-live-streaming
 
-############
-############
-############
 
 Resources:
   MediaLiveInput:
@@ -301,9 +285,75 @@ Resources:
               - !Join ["", ["arn:aws:mediaconnect:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":*"]]
 
 
-################################################
-# Resources needed for Transcriber ECS Instance Pipe0 
-################################################
+  CustomResourceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: !Sub "${AWS::StackName}-custom-resource"
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Join ["", ["arn:aws:logs:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":log-group:/aws/lambda/*"]]
+              - Effect: Allow
+                Action:
+                  - medialive:createInputSecurityGroup
+                  - medialive:describeInput
+                  - medialive:createInput
+                  - medialive:deleteInput
+                  - medialive:stopChannel
+                  - medialive:createChannel
+                  - medialive:deleteChannel
+                  - medialive:deleteInputSecurityGroup
+                  - medialive:describeChannel
+                  - medialive:startChannel
+                  - medialive:createTags 
+                  - medialive:deleteTags
+                Resource:
+                    - !Join ["", ["arn:aws:medialive:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":*"]]
+              - Effect: Allow
+                Action:
+                  - ssm:PutParameter
+                Resource:
+                  - !Join ["", ["arn:aws:ssm:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":parameter/*"]]
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource:
+                  -  !GetAtt MediaLiveRole.Arn
+
+  CustomResource:
+    Type: AWS::Lambda::Function
+    # DeletionPolicy: Retain
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-livestream-custom-resources
+      Description: Used to deploy custom resources and send AnonymousData
+      Handler: lambda.handler
+      Role: !GetAtt CustomResourceRole.Arn
+      Code:
+        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
+        S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],  "custom-resource-py.zip"]]
+      Runtime:  python3.9
+      Timeout: 180
+
+
+  ################################################
+  # Resources needed for Transcriber ECS Instance Pipe0 
+  ################################################
   TranscriberECSClusterPipe0:
     Type: AWS::ECS::Cluster
 
@@ -378,9 +428,9 @@ Resources:
     Properties:
       LogGroupName: !Join ['', [/ecs/, !Ref 'AWS::StackName', TranscriberECSTaskDefinitionPipe0]]
 
-############################################
-# Auto Scaling group for ECS Instance
-############################################
+  ############################################
+  # Auto Scaling group for ECS Instance
+  ############################################
 
   EcsInstanceAutoScalingLaunchConfigurationPipe0:
     Type: AWS::AutoScaling::LaunchConfiguration
@@ -423,9 +473,9 @@ Resources:
           Value: "This instance is the part of the Auto Scaling group which was created through ECS"
           PropagateAtLaunch: 'true'
 
-############################################
-# Load Balancer NBL Setup for ECS Instance
-############################################
+  ############################################
+  # Load Balancer NBL Setup for ECS Instance
+  ############################################
 
   ElasticLoadBalancerPipe0:
       Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -453,7 +503,7 @@ Resources:
      Port: 7950
      Protocol: UDP
 
-# Target Group for the load balancer
+  # Target Group for the load balancer
   ElasticLoadBalancerTargetGroupPipe0:
     DependsOn: ElasticLoadBalancerPipe0
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -466,9 +516,9 @@ Resources:
       HealthCheckProtocol: TCP
       VpcId: !Ref VPC
 
-################################################
-# End of ECS Container setup and Elastic Load Balancer Setup
-################################################
+  ################################################
+  # End of ECS Container setup and Elastic Load Balancer Setup
+  ################################################
 
   # Allows the ECS service to spin up EC2 instances.
   TranscriberECSServiceEC2Role:
@@ -485,9 +535,10 @@ Resources:
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceRole'
 
-############################################
-# VPC needed to create and run the ECS Transcriber Instance
-############################################
+  ############################################
+  # VPC needed to create and run the ECS Transcriber Instance
+  ############################################
+
   VPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -580,7 +631,6 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: !Sub ${AWS::StackName}
-      # VpcId: !If [ CreateSubnet1, !Ref Vpc, !Ref VpcId ]
       VpcId: !Ref VPC
       SecurityGroupIngress:
           # 7950 UDP is for the audio input.
@@ -616,9 +666,9 @@ Resources:
             reason: "Security group rules without a description obscure their purpose and may lead to bad practices in ensuring they only allow traffic from the ports and sources/destinations required."
 
 
-############################################
-# Roles needed to create and run the ECS Transcriber Instance
-############################################
+  ############################################
+  # Roles needed to create and run the ECS Transcriber Instance
+  ############################################
 
   EcsInstanceRole:
     Type: AWS::IAM::Role
@@ -657,6 +707,23 @@ Resources:
           - id: W28
             reason: "This role can be shared between different deployments."
 
+# Permissions for the ECS container.
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-TaskDefinitionTaskRole
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "This role can be shared between different two deployments."
+
 # AWS Transcribe Task Policy 
   TranscribePolicy:
     Type: AWS::IAM::Policy
@@ -683,11 +750,8 @@ Resources:
           - id: W12
             reason: "Amazon Transcribe does not support specifying a resource ARN. That is why * is used. https://docs.aws.amazon.com/IAM/latest/UserGuide/list_amazontranscribe.html"
 
-############
-############
-############
 
-Outputs:
+# Outputs:
   MediaLivePrimaryEndpoint:
     Description: Primary MediaLive input Url
     Value: !GetAtt MediaLiveInput.EndPoint1
