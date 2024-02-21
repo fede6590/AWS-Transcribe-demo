@@ -1,6 +1,0 @@
-*.sh
-__pycache__
-*.md
-.gitignore
-stream
-mp4
